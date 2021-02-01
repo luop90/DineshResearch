@@ -1,91 +1,9 @@
 import networkx as nx # Graph library
-import matplotlib.pyplot as plt
 import random
 from timeit import timeit
 import time
 from statistics import mean
-
-# Function implementations from the paper
-
-# Returns a random neighor of node in G
-def RandomSuccessor(node, G):
-    neighbors = [neighbor for neighbor in nx.neighbors(G, node)]
-    # print(f'Neighbors of {node}: {neighbors}')
-    return random.choice(neighbors)
-
-# Runs the easier version of the algorithm: we know what the root of the tree is
-def RandomTreeWithRoot(r, G):
-    n = nx.number_of_nodes(G)
-    InTree = dict()
-    Next = dict()
-    for node in nx.nodes(G):
-        InTree[node] = False
-        Next[node] = ""
-
-    InTree[r] = True
-
-    for i in nx.nodes(G):
-        u = i
-
-        while (not InTree[u]):
-            Next[u] = RandomSuccessor(u, G)
-            u = Next[u]
-
-        u = i
-
-        while (not InTree[u]):
-            InTree[u] = True
-            u = Next[u]
-
-    return Next
-
-
-def DrawTree(graphNodes, randomSpanningTree, filename="tree.png"):
-    Tree = nx.Graph()
-    Tree.add_nodes_from(graphNodes)
-    edges = []
-    for (key,value) in randomSpanningTree.items():
-        if value != "":
-            edges.append((key, value))
-
-    Tree.add_edges_from(edges)
-
-    nx.draw(Tree, with_labels=True)
-    plt.savefig(filename)
-
-
-# create the graph
-G = nx.Graph()
-
-graph1Nodes = ["Denver", "Lakewood", "Golden", "Arvada", "Aurora", "Centennial", "Littleton", "Thornton", "Boulder"]
-graph1Edges = [("Denver", "Lakewood"), # US6
-               ("Denver", "Aurora"), # I70
-               ("Denver", "Arvada"), # I70
-               ("Denver", "Thornton"), # I25
-               ("Denver", "Boulder"), # US36
-               ("Denver", "Centennial"), #I25
-               ("Denver", "Littleton"), # Sante-Fe
-               ("Lakewood", "Golden"), # US6
-               ("Lakewood", "Littleton"), # C470
-               ("Lakewood", "Arvada"), # I70
-               ("Littleton", "Centennial"), # C470
-               ("Golden", "Boulder"), #C93
-               ("Thornton", "Aurora"), # E470
-               ("Thornton", "Boulder") # Northwest Parkway
-               ]
-
-
-G.add_nodes_from(graph1Nodes)
-G.add_edges_from(graph1Edges)
-
-
-# draw the graph
-#nx.draw(G, with_labels=True)
-#plt.savefig("graph.png")
-
-# Get and draw the resulting graph
-# randomSpanningTree = RandomTreeWithRoot("Golden", G)
-
+from wilson import RandomTreeWithRoot, DrawTree
 
 # K_5 = nx.complete_graph(5)
 # randomSpanningTree = RandomTreeWithRoot(0, K_5)
