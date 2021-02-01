@@ -15,6 +15,8 @@ def RandomTreeWithRoot(r, G):
     n = nx.number_of_nodes(G)
     InTree = dict()
     Next = dict()
+    num_calls = 0 # Used to measure the number of calls to RandomSuccessor(), a better measurement of work than timing [as timing gets into cache stuff]
+
     for node in nx.nodes(G):
         InTree[node] = False
         Next[node] = ""
@@ -26,6 +28,7 @@ def RandomTreeWithRoot(r, G):
 
         while (not InTree[u]):
             Next[u] = RandomSuccessor(u, G)
+            num_calls += 1
             u = Next[u]
 
         u = i
@@ -34,7 +37,7 @@ def RandomTreeWithRoot(r, G):
             InTree[u] = True
             u = Next[u]
 
-    return Next
+    return (Next, num_calls)
 
 # Draw the tree using their in-house drawing function (which isn't very good TBH)
 def DrawTree(graphNodes, randomSpanningTree, filename="tree.png"):
