@@ -414,3 +414,154 @@ From (4):
                         
                         (a) Graph is global, immutable. "tree" is global, *mutable*, but updating requires locks.
                         (b) Threads have their own private 
+
+
+(See my email for the official "typed up" version of these notes)
+
+
+
+Next Steps
+----------
+
+(1) We'll likely want explicit help from Bo with this parallel stuff
+* High-level algorithm details only get you so far, at a certain point you really need to work on implementation-specific details
+* I should tinker around with things first and see where I get 
+
+(2) Prototyping the "high-level" algorithms in Python is likely not a bad idea -- this is where an algorithm's thesis would stop
+
+(3) Is our focus....?
+* Theory -- here's a couple parallel approaches, this one works better, and the randomness works
+
+* Or more applied -- we want 10x speedup over the otherguy and need to use C/C++ to do this
+
+
+(4) This whole merge-and-remove cycles is NP-c (feedback arc set)
+
+(5) Is multiple threads picking one-at-a-time any faster than one thread picking as fast as it can?
+* Q1: do we get any speedup at all
+* Q2: does the speedup scale (e.g. linear: 100 processors ==> 100x speedup).
+
+(6) Approach 3 to this whole thing: partition the graph so there's no communication overhead needed. But what happens when you go out of bounds?
+* Create spanning tree within subgraph, and then somehow connect
+* This will destroy the randomness, but will it be bad?
+* Classical divide-and-conquer.
+
+(a) Let's start with a clique. Partition randomly cause we're guarenteed connectivity. (Also it's a fine assumption from the Mantel test PoV)
+(b) Because we split up the veritices randomly, we haven't really hurt anything from a randomness perspective
+(c) When we start to create the random trees on your piece of the graph is where randomness breaks down
+        -> Especially, it seems like in general, a tree will go outside of a constrained "bounds"
+        -> If there's 20 partitions, 95% of the vertices are outside the clique, so that ^2 is the number of edges we're not considering
+        -> # of partitions... what about sqrt(n) partitions, or (n)^1/3, etc.
+        -> Is hierarchical setup better from a randomness?
+                * Intra-edges: edges that stay w/in their group
+                * Inter-edges: edges that go b/w groups
+                * What's the probabilty of selecting intra vs inter? Does this still give us randomness?
+                        -> we might be able to get this quasi-analytically
+                        -> Start with 1,000,000 nodes:
+                                (a) Partition into 10 groups of 100,000 nodes each. Analyze randomness (w/o doing the QQPlot).
+                                        * n verticies
+                                        * n(n-1)/2 edges (n choose 2)
+                                        * Spanning tree: n-1 edges
+                                        * P(edge being picked in perfect random ST) = (n-1) / n(n-1)/2 = 2/n
+
+                                        * Now, split n = n1 * n2 : n1 partitions of size n2 edges each
+                                        * Intra edge: 2/n2 ==> therefore want n2 as close to n as possible
+                                        * Inter edge: how many do we have (???). We pick (n1-1) of these ==> so are we going to want n1 as close to 1 as possible?
+
+                                        * Dinesh thinks this means we split into only 2 partitions every time. How does this minimize the damage to the randomness
+
+                        -> ...what about non-equal partitions? 3/4 in one, 1/4 in the other
+(d) Consider each sub-tree as a "supernode", how do we merge them? 
+
+Dinesh isn't a thread guy, he's a message passing guy.
+
+(7) Another idea: can we do a sequential divide-and-conquer to create random spanning trees using random walks?
+
+
+(8) Also, see the paper links I found on people that have already tried parallel random walks
+* "Random leaders and random spanning trees" -- abstract makes it sound like they've solved a parallel random spanning tree on a clique *and* kept it uniform random
+
+* "Many random walks are faster than one" -- abstract makes it sound like they've analyized (theoretically) the max speedup a random walk can have. Also looks to be the OG paper on parallel random walks?
+
+* "How well to random walks parallelize?" -- seems like they've proved an upper bound on the hitting time (and thus wilson's algorithm) on parallel random walks
+
+How did I miss these earlier? I only searched for "parallel" or "parallel random walks" that *also* cite Wilson's algorithm. And none of these do
+
+
+* "Divide-and-conquer algorithm for All Spanning Tree Generation" -- this is effectively what we're trying to do, only with Wilson's algorithm, and solely on cliques. Maybe it'll be useful?
+
+Notes
+=====
+
+(1) Papers
+""""""""""
+
+* Many random walks are faster than one:
+        In general, a good paper that introduces a lot of the concepts we've already learned, and also analyzes parallel random walks *entirely* from a theoretical point of view. I.e., effectively says that parallel is "always good, sometimes *fantastic*" (worst-case O(log k) speedup, best-case O(k) -- which is sometimes exponential speedup in terms of n). **BUT**: they've done 100% of this analysis using probability, and they only apply it to the "s-t connectivity problem"
+
+        * The reason I missed this paper earlier is because I was forward-citing Wilson's paper, and none of these papers cite it because they don't use random spanning trees as an application
+
+* How well do random walks parallelize:
+        
+
+* Random leaders and random spanning trees:
+
+
+Notes
+=====
+
+1. Probability seems to be on our side. See Mathematica.
+
+2. For doing this in parallel:
+
+        * Split into n1 groups -- based on # of processors?
+
+        * Run wilson's in parallel to form n1 sub-trees in a forest
+
+        * View subtrees as a "supernode", which is effectively a clique of n1
+
+        * Run Wilson's again to determine *which* subtrees get connected to which
+
+        * Randomly choose an actual edge between the supernodes that wilson's combines.
+
+        This is "divide and conquer"
+
+* But this is all for cliques, which is a very easy subset of graphs
+
+        * Let's sit and think on this for a week.
+
+                * Make sure we haven't gotten scooped
+
+                        * Well, for most theory folks, clique was likely too limited to consider.
+
+                        * But we have an important application in data science
+
+Two options:
+
+1. Only look at cliques, and just beat the hell out of this problem.
+
+        * Compare a bunch of implementations, but only on cliques
+
+2. Or, try to look at different types of graphs
+
+Next Steps
+----------
+
+1. Get Mathematica (or by hand) to spit out 2/(n1 n2) for our massive equation. To verify
+
+        * => Done!
+
+2. Suppose we didn't want this to be an even split. Can we generalize this?
+
+        * "Whatever happens later on in life, you were all born equal"
+
+        * Since we are doing this all randomly, would we still be good? 
+
+        * This way, if we have heterogeneous processors, we can give faster processors a larger group
+
+        * So ``n = n_1 + n_2 + ... + n_k``. It would be good to know that this generalizing works, and it would add 2 pages to a thesis.
+
+
+3. Maybe start tinkering with an implementation?
+
+        * We do have priorities, but if you're in the mood for implementation go for it.
