@@ -408,17 +408,67 @@ From (4):
                         * The "tree" is effectively a big bulletin board, with locks around updating it.
 
 
+Parallel ideas:
+
+(1) Multiple walks, multiple trees -- I.e., we want to make X, e.g. 1000, random spanning trees. So we just run 1000 instances of Wilson's algorithm in parallel
+    (I don't think we were ever really considering this as the "major" deliverable for my thesis, just as an easy extension of your original network science paper...? I'm including this brief discussion for completeness)
+
+        * I think this would be *super* easy to implement, but wouldn't this only be useful for applications that involve making *lots* of uniform random spanning trees (e.g. the Mantel test)?
+
+        * Basic idea:
+                (1) One "master" process that simply spawns X children processes, where X is the number of trees wanted.
+                
+                (2) The children never communicate, they just return the tree they make to the parent.
+                        -> Each child basically just runs Wilson's algorith independently of the others, with zero modification to his original algorithm
+
+                (3) "Master" process then just returns all the trees.
+
+        Benefits: Super easy to implement. Maybe 30 lines of code. I would just use the ``ParallelPython`` module to spawn all the children, and it handles things like scheduling, etc.
+
+        Drawbacks: Maybe 30 lines of code. I.e., ...this doesn't really give us anything to write a paper about, IMO. Speedup is entirely dependent on the # of CPUs, but would (ideally) be linear speedup.
+
+
+(2) Multiple random walks, one tree. -- I.e., speeding up making a single tree.
+    (I think this is what we've been intending pretty much the entire time, as this would be a new "algorithm" to publish, maybe.)
+
+
         * Different parallel models I could go with -- do you have an opinion?
 
+          Overview: we have 100 "ants" crawling around the graph, and they only sync when they eventually hit the "tree".
+
+
                 (1) Shared address space model:
+
+                        (a) Graph is global, immutable. "tree" is global, *mutable* by *any* thread; but requires locks
+                        (b) Threads have their own private ``Next[]`` array, which is the "tree" their building.
                         
-                        (a) Graph is global, immutable. "tree" is global, *mutable*, but updating requires locks.
-                        (b) Threads have their own private 
+                        Benefit: Very easy/logical extension to serial programming, so this would likely be a great place to start.
+                        Pitfall: "not all reads & writes have the same cost (and that cost is not apparent in the program text [as it's hardware based])" I.e., speedup is massively hardware dependent.
+
+                (2) Message passing model:
+                        
+                        (a) All data is private, *including* the graph and tree. (Though the graph would still be set as "immutable" to prevent unintentional bugs, as it would never need to be modified)
+                        (b) When a thread wants to "sync" because it has hit/found the tree, it broadcasts a message to all other threads to update their internal trees with its new tree.
+                                * What if two (or more) random walks hit the tree at the same time? Who broadcasts vs receives first? Race condition!!
+                                * I don't have a good answer for this yet. My basic idea is that they only broadcast a delta / update diff, but this could very easily create loops in the "tree"! See image below for a possibility.
+                               
+                        Benefit: "Often helpful in getting to a scalable program, once you have a correct one"
+                        Drawback: "Often harder to get the initial correct program than shared address space"
+                        
+               (3) Data parallel model:
+
+                        * I don't think this really applies to our use case. 
+                                * My understanding is that this works great when you have a side-effect-free function (i.e. purely functional function) that you want to apply to a large array of data
+                                * I.e., a "map" over a collection, pretty much no communication between different "iterations" of the map.
+
+        Apparently "modern practice" mixes (1) and (2) based on the hardware, so I'm wondering if it's a good idea to do *both* (1) and (2), starting with (1) and see what happens. Do you agree?
 
 
-(See my email for the official "typed up" version of these notes)
 
+Central Problems:
+(1) What if two (or more) random walks hit the tree at the same time? Who updates the tree first? Race condition! (Though locks, i.e. parallel abstraction (1) tend to solve this easily)
 
+(2) More importantly: a tree update is complicated. What if a vertex is added to the tree, which a *different* random walk visited / has in it's "Next" table? Can't naively keep running "merge" until no updates appear, as this can create "loops" in the tree, see example below
 
 Next Steps
 ----------
