@@ -643,6 +643,8 @@ Notes
                 * E1 and E2 are not independent, so we need both
                 
         * TODO: Luke. Murder through this. Verify they sum to 1
+
+                * They do! See mathematica notebook
         
         * Then, we effectively have 2 cases:
                 * Same group. For (1), it's 2/n1 * P(case 1)
@@ -654,6 +656,31 @@ Notes
                         * So combined, 2/k * 1/(n1 n2)
                         
                 * This appears to work. Generalize it.
+
+                        * It does generalize!
+
+        * We can **add** these different probabilities together, because we really want::
+
+                Given v1 and v2, P([edge v1,v2]) = ?
+
+                        * For no partitions, this is just 2/n
+
+                        * For partitions, we have a bunch of *not* overlapping cases:
+
+                                (1) For all pairs of groups, (u, v),
+                                
+                                    * Let v1 be in u, and v2 in v
+
+                                    * If u == v, then P([edge v1, v2]) = <calculated above>
+
+                                    * Else, P([edge v1, v2]) = <case 2 above>
+
+                                (2) *SUM* these together, as P(A or B) = P(A) + P(B) - P(A and B), but P(A and B) = 0
+
+                                I.e., we want P([edge v1, v2]) = \Sigma_{\forall (u, v)} P([edge v1, v2] | v1 \in u \land v2 \in v) = 2/n
+
+
+                                ...and Mathematica confirms that it does :D
                 
                 
 * Can we parallelize the partition itself?
