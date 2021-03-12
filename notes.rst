@@ -355,7 +355,7 @@ Wednesday ToDos:
 Next Steps
 ----------
 
-(1) Time even more types of graphs. Use both random models and real graphs. Must be undirected. 
+(1) Time even more types of graphs. Use both random models and real graphs. Must be undirected.
 
 (2) Theortically, are there graphs that are known to be O(n), from Theory?
 
@@ -392,7 +392,7 @@ From (4):
 
 * I've done everything in Python, which has something called the *Global Interpreter Lock* -- I.e., it does *not* support parallelism. Only 1 thread can run at a time, so you get *concurrency*, but not *parallelism*
 
-        * ...but that is only true "out of the box". I don't think concurrency gives us much of an improvement, as graph access looks effectively random in memory. 
+        * ...but that is only true "out of the box". I don't think concurrency gives us much of an improvement, as graph access looks effectively random in memory.
 
         * There also exists a module called ``multiprocessing`` which effectively side-steps GIL by spawning new processes, as GIL means threads *within* a process only actually run one at a time, but that is not true across processes: processes can run in parallel if there's >1 CPU.
 
@@ -457,7 +457,7 @@ Parallel ideas:
                         
                (3) Data parallel model:
 
-                        * I don't think this really applies to our use case. 
+                        * I don't think this really applies to our use case.
                                 * My understanding is that this works great when you have a side-effect-free function (i.e. purely functional function) that you want to apply to a large array of data
                                 * I.e., a "map" over a collection, pretty much no communication between different "iterations" of the map.
 
@@ -475,7 +475,7 @@ Next Steps
 
 (1) We'll likely want explicit help from Bo with this parallel stuff
 * High-level algorithm details only get you so far, at a certain point you really need to work on implementation-specific details
-* I should tinker around with things first and see where I get 
+* I should tinker around with things first and see where I get
 
 (2) Prototyping the "high-level" algorithms in Python is likely not a bad idea -- this is where an algorithm's thesis would stop
 
@@ -521,7 +521,7 @@ Next Steps
                                         * Dinesh thinks this means we split into only 2 partitions every time. How does this minimize the damage to the randomness
 
                         -> ...what about non-equal partitions? 3/4 in one, 1/4 in the other
-(d) Consider each sub-tree as a "supernode", how do we merge them? 
+(d) Consider each sub-tree as a "supernode", how do we merge them?
 
 Dinesh isn't a thread guy, he's a message passing guy.
 
@@ -605,7 +605,7 @@ Next Steps
 
         * "Whatever happens later on in life, you were all born equal"
 
-        * Since we are doing this all randomly, would we still be good? 
+        * Since we are doing this all randomly, would we still be good?
 
         * This way, if we have heterogeneous processors, we can give faster processors a larger group
 
@@ -615,3 +615,53 @@ Next Steps
 3. Maybe start tinkering with an implementation?
 
         * We do have priorities, but if you're in the mood for implementation go for it.
+
+
+Notes
+-----
+
+* Non-equal partitions should work, we think
+
+* For 3 groups (n1, n2, n3):
+  
+        * We have 2 vertices v1 and v2. There's 9 cases:
+        
+                1. v1 and v2 in G1
+                2. v1 in G1 and v2 in G2
+                3. v1 in G1 and v2 in G3
+                (... etc ...)
+        
+                * P(^) should sum to 1? I think
+        
+        * Let's consider (1)
+        
+                * E1: v1 in G1
+                * E2: v2 in G2
+                
+                * P(E1 and E2) = P(E1) * P(E2/E1)
+                               = n1/n * (n1-1)/(n-1)
+                * E1 and E2 are not independent, so we need both
+                
+        * TODO: Luke. Murder through this. Verify they sum to 1
+        
+        * Then, we effectively have 2 cases:
+                * Same group. For (1), it's 2/n1 * P(case 1)
+                
+                * Different groups. We should have 2/k..? for the "supernode" perspective
+                
+                        * Suppose n1 -> n2 got picked. Now we have P(edge) = 1/(n1 n2)
+                        
+                        * So combined, 2/k * 1/(n1 n2)
+                        
+                * This appears to work. Generalize it.
+                
+                
+* Can we parallelize the partition itself?
+
+        * Random permutation at the top level
+        
+        * Give each a chunk of the array
+        
+* Might be a good idea to officially Latex everything and sock it away
+  
+  
